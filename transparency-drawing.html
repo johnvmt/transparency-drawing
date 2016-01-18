@@ -1,0 +1,238 @@
+<template>
+	<style>
+		canvas {
+			width: 100%;
+			height: 100%;
+		}
+	</style>
+	<div>
+		<canvas></canvas>
+	</div>
+</template>
+
+<!-- Event Emitter. Installed by Bower. Remove if not needed -->
+<script type="text/javascript" src="bower_components/eventEmitter/EventEmitter.min.js"></script>
+<script type="text/javascript" src="bower_components/paper/dist/paper-full.min.js"></script>
+
+<script>
+	(function(window, document) {
+		// Create references to this file and directory
+		var componentDoc =  (document._currentScript || document.currentScript).ownerDocument;
+		var componentDir = componentDoc.baseURI.substring(0, componentDoc.baseURI.lastIndexOf('/'));
+		var componentFile = componentDoc.baseURI.substring(componentDoc.baseURI.lastIndexOf('/') + 1);
+		var componentName = componentFile.substring(0, componentFile.lastIndexOf('.'));
+
+		// Gets content from <template>
+		var template = componentDoc.querySelector('template').content;
+
+		// Set default element attributes
+		var elementAttributesDefault = {};
+
+		// Object constructor (but most should go into createdCalledback)
+		function Element() {
+
+		}
+
+		// Inherits from HTMLElement
+		Element.prototype = Object.create(HTMLElement.prototype);
+
+		// Add EventEmitter; Remove if not needed
+		for(var key in EventEmitter.prototype) {
+			Element.prototype[key] = EventEmitter.prototype[key];
+		}
+
+		// Fires when an instance of the element is created
+		Element.prototype.createdCallback = function() {
+			// Creates the shadow root
+			this.shadowRoot = this.createShadowRoot();
+
+			// Adds a template clone into shadow root
+			this.shadowRoot.appendChild(document.importNode(template, true));
+
+			// get and merge params from bullet-point element
+			this.elementAttributes = objectExtend(elementAttributesDefault, this.getAttributes());
+
+			// Set up observer on children and character data. Remove if not needed
+			var thisElem = this;
+			addElementObserver(this, ['childList', 'characterData', 'subtree', 'attributeOldValue'], function(mutationRecords) {
+				mutationRecords.forEach(function(mutationRecord) {
+					// Ignore changes to thisElem attributes, as these are handled by attributeChangedCallback
+					if(mutationRecord.target !== thisElem || mutationRecord.type !== 'attributes')
+						thisElem.childMutatedCallback(mutationRecord);
+				});
+			});
+
+			var canvas = this.shadowRoot.querySelector('canvas');
+			paper.install(window);
+			paper.setup(canvas);
+
+			addElementEventListener(canvas, ['mousedown'], function(event) {
+
+				console.log(event.pageX - this.offsetLeft);
+				console.log(event.pageY - this.offsetTop);
+			});
+
+			var pathParams = {
+				strokeColor: "#000000",
+				strokeWidth: 20,
+				strokeCap: 'round',
+				blendMode: 'normal',
+				shadowColor: new Color(0, 0, 0, 0.5),
+				shadowBlur: 12,
+				shadowOffset: new Point(5, 5)
+			};
+
+			var relpos = {'x' : 0, 'y': 0};
+			pathParams['segments'] = [relpos];
+
+			var path = new paper.Path(pathParams);
+			path.add(relpos);
+
+			path.add({'x' : 20, 'y': 20});
+
+			paper.view.draw();
+
+			// Triggered when the window is resized
+			window.addEventListener('resize', function() {
+
+			});
+		};
+
+		// Called when an attribute of this element is added, removed, or updated
+		Element.prototype.attributeChangedCallback = function(attr, oldVal, newVal) {
+
+		};
+
+		// Called when an attribute in a child element is changed; uses child observer
+		Element.prototype.childAttributeChangedCallback = function(target, attr, oldVal, newVal) {
+
+		};
+
+		// Called when a child element is added; uses child observer
+		Element.prototype.childAddedCallback = function(child) {
+
+		};
+
+		// Called when a child element is removed; uses child observer
+		Element.prototype.childRemovedCallback = function(child) {
+
+		};
+
+		// Called when a child element (child) is added to a child of this (target); uses child observer
+		Element.prototype.descendantAddedCallback = function(target, child) {
+
+		};
+
+		// alled when a descendant element (child) is removed from a child of this (target); uses child observer
+		Element.prototype.descendantRemovedCallback = function(target, child) {
+
+		};
+
+		// Called when element's innerHtml is changed; uses child observer
+		Element.prototype.characterDataChangedCallback = function(newData) {
+
+		};
+
+		// Called when a child element is changed; uses child observer
+		Element.prototype.childMutatedCallback = function(mutationRecord) {
+			switch(mutationRecord.type) {
+				case "childList":
+					//console.log(mutationRecord);
+					if(mutationRecord.target === this) { // Direct descendant
+						for(var ctr = 0; ctr < mutationRecord.addedNodes.length; ctr++)
+							this.childAddedCallback(mutationRecord.addedNodes[ctr]);
+						for(ctr = 0; ctr < mutationRecord.removedNodes.length; ctr++)
+							this.childRemovedCallback(mutationRecord.removedNodes[ctr]);
+					}
+					else {
+						for(var ctr = 0; ctr < mutationRecord.addedNodes.length; ctr++)
+							this.descendantAddedCallback(mutationRecord.target, mutationRecord.addedNodes[ctr]);
+						for(ctr = 0; ctr < mutationRecord.removedNodes.length; ctr++)
+							this.descendantRemovedCallback(mutationRecord.target, mutationRecord.addedNodes[ctr]);
+					}
+					break;
+				case "attributes":
+					this.childAttributeChangedCallback(mutationRecord.target, mutationRecord.attributeName, mutationRecord.oldValue, this.getAttribute(mutationRecord.attributeName, mutationRecord.target));
+					break;
+				case "characterData":
+					this.characterDataChangedCallback(mutationRecord.target.data);
+					break;
+			}
+		};
+
+		/* Component utility Functions */
+		// Get all attributes of element
+		Element.prototype.getAttributes = function(target) {
+			if(typeof target === 'undefined')
+				target = this;
+
+			var attributes = {};
+			for(var ctr = 0; ctr < target.attributes.length; ctr++) {
+				attributes[target.attributes[ctr].nodeName] = target.attributes[ctr].nodeValue;
+			}
+			return attributes;
+		};
+
+		Element.prototype.getAttribute = function(attributeName, target) {
+			if(typeof target === 'undefined')
+				target = this;
+
+			for(var ctr = 0; ctr < target.attributes.length; ctr++) {
+				if(target.attributes[ctr].nodeName === attributeName)
+					return target.attributes[ctr].nodeValue;
+			}
+			return undefined;
+		};
+
+		/* Utility Functions */
+		// Add observers to an element
+		function addElementObserver(element, mutations, listener) {
+			// possible mutations: 	attributes, childList, characterData
+			var observer = new MutationObserver(listener);
+
+			if(mutations.length > 0) {
+				var observerConfig = {};
+				for(var mutationIndex = 0; mutationIndex < mutations.length; mutationIndex++) {
+					observerConfig[mutations[mutationIndex]] = true;
+				}
+				observer.observe(element, observerConfig);
+			}
+
+			return observer;
+			// Returned observer can be removed with observer.disconnect()
+		}
+
+		// Add event triggers for an element
+		function addElementEventListener(element, events, listener) {
+			// if string (single event) passed, convert to Array
+			if(!Array.isArray(events))
+				events = [events];
+
+			for(var eventIndex = 0; eventIndex < events.length; eventIndex++) {
+				element.addEventListener(events[eventIndex], listener);
+			}
+		}
+
+		// Return sum of all objects passed as new object, with later arguments overwriting
+		function objectExtend() {
+			var merged = {};
+			objectForEach(arguments, function(argument) {
+				for (var attrname in argument) {
+					if(argument.hasOwnProperty(attrname))
+						merged[attrname] = argument[attrname];
+				}
+			});
+			return merged;
+
+			function objectForEach(object, callback) {
+				// run function on each property (child) of object
+				for(var property in object) { // pull keys before looping through?
+					if (object.hasOwnProperty(property))
+						callback(object[property], property, object);
+				}
+			}
+		}
+
+		document.registerElement(componentName, Element);
+	})(window, document);
+</script>
