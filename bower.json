@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/johnvmt/transparency-template.git"
+    "url": "git://github.com/johnvmt/transparency-drawing.git"
   },
   "ignore": [
     "**/.*",

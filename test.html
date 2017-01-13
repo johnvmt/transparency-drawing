@@ -9,7 +9,7 @@
 	<meta name="viewport" content = "initial-scale = 1.0, user-scalable = no">
 
 	<!-- Polyfill -->
-	<script src="node_modules/webcomponents.js/webcomponents.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/webcomponentsjs/0.7.23/webcomponents.min.js"></script>
 	<link rel="import" href="transparency-drawing.html">
 
 </head>
@@ -20,7 +20,7 @@
 </div>
 
 <script type="text/javascript">
-	var dl = document.querySelector("datastore-drawinglayer");
+	var dl = document.querySelector("transparency-drawing");
 
 	window.addEventListener('WebComponentsReady', function(e) {
 		// imports are loaded and elements have been registered
