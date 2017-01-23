@@ -8,7 +8,6 @@
 			height: 100%;
 		}
 		#canvas {
-			background-color: rgba(0,0,255,0.5);
 			z-index: 2;
 		}
 		svg {
@@ -65,30 +64,70 @@
 			Element.prototype[key] = EventEmitter.prototype[key];
 		}
 
+		// Collector function to start a path
+		// Gather path attributes and pass to drawing function
+		Element.prototype.startPath = function(id, percentageX, percentageY) {
 
-		Element.prototype.startPath = function(id, x, y) {
+			// Capture path attributes from element attributes
+			var pathAttributes = {};
+			var pathAttributeKeyPrefix = 'path-'; // capture all attributes that start with path-
+			objectForEach(this.getAttributes(), function(attributeVal, attributeKey) {
+				if(attributeKey.indexOf(pathAttributeKeyPrefix) == 0)
+					pathAttributes[attributeKey.slice(pathAttributeKeyPrefix.length)] = attributeVal;
+			});
+
+			var pathAttributesDefault = {
+				'fill': 'transparent',
+				'stroke': 'red',
+				'stroke-width': '10',
+				'stroke-linecap': 'round',
+				'filter': 'url(#drop-shadow)'
+			};
+
+			pathAttributes = objectExtend(pathAttributesDefault, pathAttributes); // Merge defaults with passed params
+
+			this.startPathStyle(id, pathAttributes, percentageX, percentageY);
+		};
+
+		Element.prototype.startPathStyle = function(id, pathAttributes, percentageX, percentageY) {
+			var coordinateX = percentageX * this.clientWidth;
+			var coordinateY = percentageY * this.clientHeight;
+
 			var drawingsNode = this._elements.drawings;
 
 			var pathNode = document.createElementNS('http://www.w3.org/2000/svg','path');
-			pathNode.setAttribute('fill', 'transparent');
-			pathNode.setAttribute('stroke', 'red');
-			pathNode.setAttribute('stroke-width', '5');
-			pathNode.setAttribute('filter', 'url(#drop-shadow)');
-			pathNode.setAttribute('d', 'M' + x.toString() + ',' + y.toString());
+			pathNode.setAttribute('d', 'M' + coordinateX.toString() + ',' + coordinateY.toString());
+
+			objectForEach(pathAttributes, function(attributeVal, attributeKey) {
+				pathNode.setAttribute(attributeKey, attributeVal);
+			});
+
 			drawingsNode.appendChild(pathNode);
+
 			this._paths[id] = pathNode;
+
+			this.emitMirror('startPathStyle', arguments);
 		};
 
-		Element.prototype.extendPath = function(id, x, y) {
+		Element.prototype.extendPath = function(id, percentageX, percentageY) {
+			var coordinateX = percentageX * this.clientWidth;
+			var coordinateY = percentageY * this.clientHeight;
+
 			if(typeof this._paths[id] == 'object') {
 				var pathNode = this._paths[id];
-				pathNode.setAttribute('d', pathNode.getAttribute('d') + ' ' + x + ',' + y);
+				pathNode.setAttribute('d', pathNode.getAttribute('d') + ' ' + coordinateX + ',' + coordinateY);
+				this.emitMirror('extendPath', arguments);
 			}
 		};
 
-		Element.prototype.endPath = function(id, x, y) {
+		Element.prototype.endPath = function(id, percentageX, percentageY) {
 			if(typeof this._paths[id] == 'object')
 				delete this._paths[id];
+				this.emitMirror('extendPath', arguments);
+		};
+
+		Element.prototype.emitMirror = function(functionName, functionArgs) {
+			this.emit.apply(this, ['mirror', functionName].concat(Array.prototype.slice.call(functionArgs)));
 		};
 
 		Element.prototype.addTouchHandlers = function() {
@@ -100,18 +139,21 @@
 				var eventX = event.clientX - offsetLeft(canvas);
 				var eventY = event.clientY - offsetTop(canvas);
 
+				var eventPercentageX = eventX / elem.clientWidth;
+				var eventPercentageY = eventY / elem.clientHeight;
+
 				switch(event.type) {
 					case 'mousedown':
-						elem.startPath(id, eventX, eventY);
+						elem.startPath(id, eventPercentageX, eventPercentageY);
 						elem.mousedown = true;
 						break;
 					case 'mousemove':
 						if(typeof elem.mousedown == 'boolean' && elem.mousedown)
-							elem.extendPath(id, eventX, eventY);
+							elem.extendPath(id, eventPercentageX, eventPercentageY);
 						break;
 					case 'mouseup':
 						elem.mousedown = false;
-						elem.endPath(id, eventX, eventY);
+						elem.endPath(id, eventPercentageX, eventPercentageY);
 						break;
 				}
 			}
@@ -123,17 +165,20 @@
 					var eventX = touch.clientX - offsetLeft(canvas);
 					var eventY = touch.clientY - offsetTop(canvas);
 
+					var eventPercentageX = eventX / elem.clientWidth;
+					var eventPercentageY = eventY / elem.clientHeight;
+
 					switch(event.type) {
 						case 'touchstart':
-							elem.startPath(id, eventX, eventY);
+							elem.startPath(id, eventPercentageX, eventPercentageY);
 							event.preventDefault();
 							break;
 						case 'touchmove':
-							elem.extendPath(id, eventX, eventY);
+							elem.extendPath(id, eventPercentageX, eventPercentageY);
 							event.preventDefault();
 							break;
 						case 'touchend':
-							elem.endPath(id, eventX, eventY);
+							elem.endPath(id, eventPercentageX, eventPercentageY);
 							break;
 					}
 				});
