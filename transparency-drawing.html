@@ -35,7 +35,7 @@
 </template>
 
 <!-- Event Emitter. Installed by Bower. Remove if not needed -->
-<script type="text/javascript" src="bower_components/eventEmitter/EventEmitter.min.js"></script>
+<script type="text/javascript" src="../eventEmitter/EventEmitter.min.js"></script>
 
 <script>
 	(function(window, document) {
@@ -63,6 +63,15 @@
 		for(var key in EventEmitter.prototype) {
 			Element.prototype[key] = EventEmitter.prototype[key];
 		}
+
+		Element.prototype.clearPaths = function() {
+			var drawingsNode = this._elements.drawings;
+			while (drawingsNode.firstChild) {
+				drawingsNode.removeChild(drawingsNode.firstChild);
+			}
+
+			this.emitMirror('clearPaths', arguments);
+		};
 
 		// Collector function to start a path
 		// Gather path attributes and pass to drawing function
@@ -123,7 +132,7 @@
 		Element.prototype.endPath = function(id, percentageX, percentageY) {
 			if(typeof this._paths[id] == 'object')
 				delete this._paths[id];
-				this.emitMirror('extendPath', arguments);
+			this.emitMirror('endPath', arguments);
 		};
 
 		Element.prototype.emitMirror = function(functionName, functionArgs) {
