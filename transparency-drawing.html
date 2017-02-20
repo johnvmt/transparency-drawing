@@ -145,8 +145,10 @@
 
 			function mouseHandler(event) {
 				var id = 'mouse';
-				var eventX = event.clientX - offsetLeft(canvas);
-				var eventY = event.clientY - offsetTop(canvas);
+
+				var canvasBoundingClientRect = canvas.getBoundingClientRect();
+				var eventX = event.clientX - canvasBoundingClientRect.left;
+				var eventY = event.clientY - canvasBoundingClientRect.top;
 
 				var eventPercentageX = eventX / elem.clientWidth;
 				var eventPercentageY = eventY / elem.clientHeight;
@@ -171,8 +173,9 @@
 				objectForEach(event.changedTouches, function(touch) {
 					var id = touch.identifier.toString();
 
-					var eventX = touch.clientX - offsetLeft(canvas);
-					var eventY = touch.clientY - offsetTop(canvas);
+					var canvasBoundingClientRect = canvas.getBoundingClientRect();
+					var eventX = touch.clientX - canvasBoundingClientRect.left;
+					var eventY = touch.clientY - canvasBoundingClientRect.top;
 
 					var eventPercentageX = eventX / elem.clientWidth;
 					var eventPercentageY = eventY / elem.clientHeight;
@@ -372,24 +375,6 @@
 				if (object.hasOwnProperty(property))
 					callback(object[property], property, object);
 			}
-		}
-
-		function offsetLeft(elem) {
-			var offsetLeft = 0;
-			do {
-				if(!isNaN( elem.offsetLeft))
-					offsetLeft += elem.offsetLeft;
-			} while(elem = elem.offsetParent);
-			return offsetLeft;
-		}
-
-		function offsetTop(elem) {
-			var offsetTop = 0;
-			do {
-				if(!isNaN( elem.offsetTop))
-					offsetTop += elem.offsetTop;
-			} while(elem = elem.offsetParent);
-			return offsetTop;
 		}
 
 		document.registerElement(componentName, Element);
