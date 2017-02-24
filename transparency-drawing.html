@@ -1,22 +1,6 @@
 <template>
-	<style>
-		.layer {
-			position: absolute;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-		}
-		#canvas {
-			z-index: 2;
-		}
-		svg {
-			z-index: 1;
-		}
-	</style>
 	<div>
-		<div id="canvas" class="layer"></div>
-		<svg class="layer" xmlns="http://www.w3.org/2000/svg">
+		<svg style="position: absolute;	top: 0; left: 0; width: 100%; height: 100%;" xmlns="http://www.w3.org/2000/svg">
 			<defs>
 				<filter id="drop-shadow">
 					<feGaussianBlur in="SourceAlpha" stdDeviation="2.2"/>
@@ -64,13 +48,96 @@
 			Element.prototype[key] = EventEmitter.prototype[key];
 		}
 
-		Element.prototype.clearPaths = function() {
+		Element.prototype.clear = function() {
 			var drawingsNode = this._elements.drawings;
 			while (drawingsNode.firstChild) {
 				drawingsNode.removeChild(drawingsNode.firstChild);
 			}
 
-			this.emitMirror('clearPaths', arguments);
+			this.emitMirror('clear', arguments);
+		};
+
+		Element.prototype.removeImage = function(imageId) {
+			if(typeof this._images[imageId] == 'object') {
+				this._images[imageId].parentNode.removeChild(this._images[imageId]);
+				delete this._images[imageId];
+				this.emitMirror('removeImage', arguments);
+			}
+		};
+
+		Element.prototype.addImage = function(percentageX, percentageY) {
+			// Capture path attributes from element attributes
+			var imageAttributes = {};
+			var imageAttributeKeyPrefix = 'image-'; // capture all attributes that start with path-
+			objectForEach(this.getAttributes(), function(attributeVal, attributeKey) {
+				if(attributeKey.indexOf(imageAttributeKeyPrefix) == 0)
+					imageAttributes[attributeKey.slice(imageAttributeKeyPrefix.length)] = attributeVal;
+			});
+
+			var imageAttributesDefault = {
+				'filter': 'url(#drop-shadow)'
+			};
+
+			imageAttributes = objectExtend(imageAttributesDefault, imageAttributes); // Merge defaults with passed params
+
+			var imageId = uniqueId();
+			this.addImageStyle(imageId, imageAttributes, percentageX, percentageY);
+		};
+
+		Element.prototype.addImageStyle = function(imageId, imageAttributes, percentageX, percentageY) {
+			var elem = this;
+			var coordinateX = percentageX * this.clientWidth;
+			var coordinateY = percentageY * this.clientHeight;
+
+			var drawingsNode = this._elements.drawings;
+
+			// Capture image-* attributes from element attributes
+			var pathAttributes = {};
+			var pathAttributeKeyPrefix = 'path-'; // capture all attributes that start with path-
+			objectForEach(this.getAttributes(), function(attributeVal, attributeKey) {
+				if(attributeKey.indexOf(pathAttributeKeyPrefix) == 0)
+					pathAttributes[attributeKey.slice(pathAttributeKeyPrefix.length)] = attributeVal;
+			});
+
+			var imageNode = document.createElementNS('http://www.w3.org/2000/svg','image');
+
+			// Set the image src
+			imageNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imageAttributes['href']);
+			imageNode.setAttribute('x', coordinateX - (imageAttributes.width / 2));
+			imageNode.setAttribute('y', coordinateY - (imageAttributes.height / 2));
+
+			objectForEach(imageAttributes, function(attributeVal, attributeKey) {
+				if(attributeKey != 'href' && attributeKey != 'id')
+					imageNode.setAttribute(attributeKey, attributeVal);
+			});
+
+			/*
+			var imageAnimationNode = document.createElementNS('http://www.w3.org/2000/svg','animateTransform');
+			imageAnimationNode.setAttribute('attributeType', "XML");
+			imageAnimationNode.setAttribute('attributeName', "transform");
+			imageAnimationNode.setAttribute('type', "scale");
+			imageAnimationNode.setAttribute('from', "0");
+			imageAnimationNode.setAttribute('to', "1");
+			imageAnimationNode.setAttribute('dur', "10s");
+			imageAnimationNode.setAttribute('repeatCount', "indefinite");
+			imageNode.appendChild(imageAnimationNode);
+			*/
+
+			// Add handlers to remove image
+			imageNode.addEventListener('mousedown',function(event) {
+				event.stopPropagation();
+				elem.removeImage(imageId);
+			});
+
+			imageNode.addEventListener('touchstart',function(event) {
+				event.stopPropagation();
+				elem.removeImage(imageId);
+			});
+
+			elem._images[imageId] = imageNode;
+			drawingsNode.appendChild(imageNode);
+
+			this.emitMirror('addImageStyle', arguments);
 		};
 
 		// Collector function to start a path
@@ -139,12 +206,19 @@
 			this.emit.apply(this, ['mirror', functionName].concat(Array.prototype.slice.call(functionArgs)));
 		};
 
-		Element.prototype.addTouchHandlers = function() {
+
+		Element.prototype.addCanvasTouchHandlers = function() {
 			var elem = this;
-			var canvas = this._elements.canvas;
+			var canvas = elem;
+
+			function getMode() {
+				var mode = elem.getAttribute('mode');
+				return (mode == undefined) ? 'path' : mode;
+			}
 
 			function mouseHandler(event) {
 				var id = 'mouse';
+				var mode = getMode();
 
 				var canvasBoundingClientRect = canvas.getBoundingClientRect();
 				var eventX = event.clientX - canvasBoundingClientRect.left;
@@ -153,25 +227,38 @@
 				var eventPercentageX = eventX / elem.clientWidth;
 				var eventPercentageY = eventY / elem.clientHeight;
 
-				switch(event.type) {
-					case 'mousedown':
-						elem.startPath(id, eventPercentageX, eventPercentageY);
-						elem.mousedown = true;
+				switch(mode) {
+					case 'image':
+						switch(event.type) {
+							case 'mousedown':
+								elem.addImage(eventPercentageX, eventPercentageY);
+								break;
+						}
 						break;
-					case 'mousemove':
-						if(typeof elem.mousedown == 'boolean' && elem.mousedown)
-							elem.extendPath(id, eventPercentageX, eventPercentageY);
-						break;
-					case 'mouseup':
-						elem.mousedown = false;
-						elem.endPath(id, eventPercentageX, eventPercentageY);
+					case 'path':
+						switch(event.type) {
+							case 'mousedown':
+								elem.startPath(id, eventPercentageX, eventPercentageY);
+								elem.mousedown = true;
+								break;
+							case 'mousemove':
+								if(typeof elem.mousedown == 'boolean' && elem.mousedown)
+									elem.extendPath(id, eventPercentageX, eventPercentageY);
+								break;
+							case 'mouseup':
+								elem.mousedown = false;
+								elem.endPath(id, eventPercentageX, eventPercentageY);
+								break;
+						}
 						break;
 				}
+
 			}
 
 			function touchHandler(event) {
 				objectForEach(event.changedTouches, function(touch) {
 					var id = touch.identifier.toString();
+					var mode = getMode();
 
 					var canvasBoundingClientRect = canvas.getBoundingClientRect();
 					var eventX = touch.clientX - canvasBoundingClientRect.left;
@@ -180,17 +267,28 @@
 					var eventPercentageX = eventX / elem.clientWidth;
 					var eventPercentageY = eventY / elem.clientHeight;
 
-					switch(event.type) {
-						case 'touchstart':
-							elem.startPath(id, eventPercentageX, eventPercentageY);
-							event.preventDefault();
+					switch(mode) {
+						case 'image':
+							switch(event.type) {
+								case 'touchstart':
+									elem.addImage(eventPercentageX, eventPercentageY);
+									break;
+							}
 							break;
-						case 'touchmove':
-							elem.extendPath(id, eventPercentageX, eventPercentageY);
-							event.preventDefault();
-							break;
-						case 'touchend':
-							elem.endPath(id, eventPercentageX, eventPercentageY);
+						case 'path':
+							switch (event.type) {
+								case 'touchstart':
+									elem.startPath(id, eventPercentageX, eventPercentageY);
+									event.preventDefault();
+									break;
+								case 'touchmove':
+									elem.extendPath(id, eventPercentageX, eventPercentageY);
+									event.preventDefault();
+									break;
+								case 'touchend':
+									elem.endPath(id, eventPercentageX, eventPercentageY);
+									break;
+							}
 							break;
 					}
 				});
@@ -214,93 +312,21 @@
 			this.shadowRoot.appendChild(document.importNode(template, true));
 
 			this._elements = {
-				'canvas': this.shadowRoot.querySelector('#canvas'),
 				'drawings': this.shadowRoot.querySelector('svg #drawings')
 			};
 
 			this._paths = {};
+			this._images = {};
 
 			// get and merge params from bullet-point element
 			this.elementAttributes = objectExtend(elementAttributesDefault, this.getAttributes());
-
-			// Set up observer on children and character data. Remove if not needed
-			var thisElem = this;
-			addElementObserver(this, ['childList', 'characterData', 'subtree', 'attributeOldValue'], function(mutationRecords) {
-				mutationRecords.forEach(function(mutationRecord) {
-					// Ignore changes to thisElem attributes, as these are handled by attributeChangedCallback
-					if(mutationRecord.target !== thisElem || mutationRecord.type !== 'attributes')
-						thisElem.childMutatedCallback(mutationRecord);
-				});
-			});
 
 			// Triggered when the window is resized
 			window.addEventListener('resize', function() {
 
 			});
 
-			this.addTouchHandlers();
-		};
-
-		// Called when an attribute of this element is added, removed, or updated
-		Element.prototype.attributeChangedCallback = function(attr, oldVal, newVal) {
-
-		};
-
-		// Called when an attribute in a child element is changed; uses child observer
-		Element.prototype.childAttributeChangedCallback = function(target, attr, oldVal, newVal) {
-
-		};
-
-		// Called when a child element is added; uses child observer
-		Element.prototype.childAddedCallback = function(child) {
-
-		};
-
-		// Called when a child element is removed; uses child observer
-		Element.prototype.childRemovedCallback = function(child) {
-
-		};
-
-		// Called when a child element (child) is added to a child of this (target); uses child observer
-		Element.prototype.descendantAddedCallback = function(target, child) {
-
-		};
-
-		// alled when a descendant element (child) is removed from a child of this (target); uses child observer
-		Element.prototype.descendantRemovedCallback = function(target, child) {
-
-		};
-
-		// Called when element's innerHtml is changed; uses child observer
-		Element.prototype.characterDataChangedCallback = function(newData) {
-
-		};
-
-		// Called when a child element is changed; uses child observer
-		Element.prototype.childMutatedCallback = function(mutationRecord) {
-			switch(mutationRecord.type) {
-				case "childList":
-					//console.log(mutationRecord);
-					if(mutationRecord.target === this) { // Direct descendant
-						for(var ctr = 0; ctr < mutationRecord.addedNodes.length; ctr++)
-							this.childAddedCallback(mutationRecord.addedNodes[ctr]);
-						for(ctr = 0; ctr < mutationRecord.removedNodes.length; ctr++)
-							this.childRemovedCallback(mutationRecord.removedNodes[ctr]);
-					}
-					else {
-						for(var ctr = 0; ctr < mutationRecord.addedNodes.length; ctr++)
-							this.descendantAddedCallback(mutationRecord.target, mutationRecord.addedNodes[ctr]);
-						for(ctr = 0; ctr < mutationRecord.removedNodes.length; ctr++)
-							this.descendantRemovedCallback(mutationRecord.target, mutationRecord.addedNodes[ctr]);
-					}
-					break;
-				case "attributes":
-					this.childAttributeChangedCallback(mutationRecord.target, mutationRecord.attributeName, mutationRecord.oldValue, this.getAttribute(mutationRecord.attributeName, mutationRecord.target));
-					break;
-				case "characterData":
-					this.characterDataChangedCallback(mutationRecord.target.data);
-					break;
-			}
+			this.addCanvasTouchHandlers();
 		};
 
 		/* Component utility Functions */
@@ -375,6 +401,16 @@
 				if (object.hasOwnProperty(property))
 					callback(object[property], property, object);
 			}
+		}
+
+		function uniqueId() {
+			function s4() {
+				return Math.floor((1 + Math.random()) * 0x10000)
+					.toString(16)
+					.substring(1);
+			}
+			return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+				s4() + '-' + s4() + s4() + s4();
 		}
 
 		document.registerElement(componentName, Element);

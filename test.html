@@ -3,6 +3,9 @@
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
+	<!-- Event Emitter. Installed by Bower. Remove if not needed -->
+	<script type="text/javascript" src="bower_components/eventEmitter/EventEmitter.min.js"></script>
+
 	<!-- iOS Webapp Config -->
 	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
@@ -15,8 +18,8 @@
 </head>
 <body style="margin: 0; padding: 0; overflow: hidden;">
 <div style="top: 20px; left: 20px; width: 80%; height: 80%; margin: 30px; display: block; position: absolute;">
-	<transparency-drawing path-stroke="#00ff00" path-stroke-width="10" id="drawing1" style="position: absolute; top: 0; left: 0; z-index: 2; width: 75%; height: 50%; border: 2px solid #000000;"></transparency-drawing>
-	<transparency-drawing id="drawing2" style="position: absolute; top: 50%; left: 0; z-index: 2; width: 50%; height: 50%; border: 2px solid #000000;"></transparency-drawing>
+	<transparency-drawing mode="image" image-href="https://cdn2.iconfinder.com/data/icons/metro-uinvert-dock/256/Firefox_alt.png" image-height="50" image-width="50" path-stroke="#00ff00" path-stroke-width="10" path-stroke-opacity="0.5" id="drawing1" style="position: absolute; top: 0; left: 0; z-index: 2; width: 75%; height: 50%; border: 2px solid #000000;"></transparency-drawing>
+	<transparency-drawing mode="path" id="drawing2" style="position: absolute; top: 50%; left: 0; z-index: 2; width: 50%; height: 50%; border: 2px solid #000000;"></transparency-drawing>
 	<a style="position: absolute; top: 500px; left: 500px; z-index: 1;" href="http://cnn.com">CNN.com</a>
 </div>
 
