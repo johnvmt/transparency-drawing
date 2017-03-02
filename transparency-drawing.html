@@ -80,6 +80,8 @@
 
 			imageAttributes = objectExtend(imageAttributesDefault, imageAttributes); // Merge defaults with passed params
 
+
+
 			var imageId = uniqueId();
 			this.addImageStyle(imageId, imageAttributes, percentageX, percentageY);
 		};
@@ -103,34 +105,55 @@
 
 			// Set the image src
 			imageNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imageAttributes['href']);
-			imageNode.setAttribute('x', coordinateX - (imageAttributes.width / 2));
-			imageNode.setAttribute('y', coordinateY - (imageAttributes.height / 2));
+
+			// Support percentages
+			if(imageAttributes.width[imageAttributes.width.length - 1] == '%')
+				var imageWidth = this.clientWidth * (Number(imageAttributes.width.replace(/[^\d.-]/g, '')) / 100);
+			else
+				var imageWidth = Number(imageAttributes.width.replace(/[^\d.-]/g, ''));
+
+			// Support percentages
+			if(imageAttributes.width[imageAttributes.height.length - 1] == '%')
+				var imageHeight = this.clientHeight * (Number(imageAttributes.height.replace(/[^\d.-]/g, '')) / 100);
+			else
+				var imageHeight = Number(imageAttributes.height.replace(/[^\d.-]/g, ''));
+
+			imageNode.setAttribute('x', coordinateX - (imageWidth / 2));
+			imageNode.setAttribute('y', coordinateY - (imageHeight / 2));
+
+			console.log("W-H", imageWidth, imageHeight);
+
+			imageNode.setAttribute('width', imageWidth);
+			imageNode.setAttribute('height', imageHeight);
 
 			objectForEach(imageAttributes, function(attributeVal, attributeKey) {
-				if(attributeKey != 'href' && attributeKey != 'id')
+				if(['href', 'width', 'height', 'id'].indexOf(attributeKey) < 0)
 					imageNode.setAttribute(attributeKey, attributeVal);
 			});
 
 			/*
-			var imageAnimationNode = document.createElementNS('http://www.w3.org/2000/svg','animateTransform');
-			imageAnimationNode.setAttribute('attributeType', "XML");
-			imageAnimationNode.setAttribute('attributeName', "transform");
-			imageAnimationNode.setAttribute('type', "scale");
-			imageAnimationNode.setAttribute('from', "0");
-			imageAnimationNode.setAttribute('to', "1");
-			imageAnimationNode.setAttribute('dur', "10s");
-			imageAnimationNode.setAttribute('repeatCount', "indefinite");
-			imageNode.appendChild(imageAnimationNode);
-			*/
+			 var imageAnimationNode = document.createElementNS('http://www.w3.org/2000/svg','animateTransform');
+			 imageAnimationNode.setAttribute('attributeType', "XML");
+			 imageAnimationNode.setAttribute('attributeName', "transform");
+			 imageAnimationNode.setAttribute('type', "scale");
+			 imageAnimationNode.setAttribute('from', "0");
+			 imageAnimationNode.setAttribute('to', "1");
+			 imageAnimationNode.setAttribute('dur', "10s");
+			 imageAnimationNode.setAttribute('repeatCount', "indefinite");
+			 imageNode.appendChild(imageAnimationNode);
+			 */
 
 			// Add handlers to remove image
+
 			imageNode.addEventListener('mousedown',function(event) {
 				event.stopPropagation();
+				event.preventDefault();
 				elem.removeImage(imageId);
 			});
 
 			imageNode.addEventListener('touchstart',function(event) {
 				event.stopPropagation();
+				event.preventDefault();
 				elem.removeImage(imageId);
 			});
 
@@ -217,6 +240,8 @@
 			}
 
 			function mouseHandler(event) {
+				event.stopPropagation();
+				event.preventDefault();
 				var id = 'mouse';
 				var mode = getMode();
 
@@ -256,11 +281,14 @@
 			}
 
 			function touchHandler(event) {
+				event.stopPropagation();
+				event.preventDefault();
+				var mode = getMode();
+				var canvasBoundingClientRect = canvas.getBoundingClientRect();
+
 				objectForEach(event.changedTouches, function(touch) {
 					var id = touch.identifier.toString();
-					var mode = getMode();
 
-					var canvasBoundingClientRect = canvas.getBoundingClientRect();
 					var eventX = touch.clientX - canvasBoundingClientRect.left;
 					var eventY = touch.clientY - canvasBoundingClientRect.top;
 
@@ -279,11 +307,9 @@
 							switch (event.type) {
 								case 'touchstart':
 									elem.startPath(id, eventPercentageX, eventPercentageY);
-									event.preventDefault();
 									break;
 								case 'touchmove':
 									elem.extendPath(id, eventPercentageX, eventPercentageY);
-									event.preventDefault();
 									break;
 								case 'touchend':
 									elem.endPath(id, eventPercentageX, eventPercentageY);
@@ -301,7 +327,6 @@
 			canvas.addEventListener('touchmove', touchHandler, false);
 			canvas.addEventListener('touchend', touchHandler, false);
 		};
-
 
 		// Fires when an instance of the element is created
 		Element.prototype.createdCallback = function() {
