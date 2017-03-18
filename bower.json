@@ -6,12 +6,8 @@
   ],
   "license": "MIT",
   "main": "transparency-drawing.html",
-  "dependencies": {
-    "eventEmitter": "5.1.x"
-  },
-  "devDependencies": {
-
-  },
+  "dependencies": {},
+  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "git://github.com/johnvmt/transparency-drawing.git"
