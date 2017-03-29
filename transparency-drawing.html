@@ -40,20 +40,20 @@
 		// Inherits from HTMLElement
 		Element.prototype = Object.create(HTMLElement.prototype);
 
-		Element.prototype.clear = function() {
+		Element.prototype.clear = function(mirrorTag) {
 			var drawingsNode = this._elements.drawings;
 			while (drawingsNode.firstChild) {
 				drawingsNode.removeChild(drawingsNode.firstChild);
 			}
 
-			this.emitMirror('clear', arguments);
+			this.emitMirror(mirrorTag, 'clear', arguments);
 		};
 
-		Element.prototype.removeImage = function(imageId) {
+		Element.prototype.removeImage = function(imageId, mirrorTag) {
 			if(typeof this._images[imageId] == 'object') {
 				this._images[imageId].parentNode.removeChild(this._images[imageId]);
 				delete this._images[imageId];
-				this.emitMirror('removeImage', arguments);
+				this.emitMirror(mirrorTag, 'removeImage', arguments);
 			}
 		};
 
@@ -72,13 +72,11 @@
 
 			imageAttributes = objectExtend(imageAttributesDefault, imageAttributes); // Merge defaults with passed params
 
-
-
 			var imageId = uniqueId();
 			this.addImageStyle(imageId, imageAttributes, percentageX, percentageY);
 		};
 
-		Element.prototype.addImageStyle = function(imageId, imageAttributes, percentageX, percentageY) {
+		Element.prototype.addImageStyle = function(imageId, imageAttributes, percentageX, percentageY, mirrorTag) {
 			var elem = this;
 			var coordinateX = percentageX * this.clientWidth;
 			var coordinateY = percentageY * this.clientHeight;
@@ -152,7 +150,7 @@
 			elem._images[imageId] = imageNode;
 			drawingsNode.appendChild(imageNode);
 
-			this.emitMirror('addImageStyle', arguments);
+			this.emitMirror(mirrorTag, 'addImageStyle', arguments);
 		};
 
 		// Collector function to start a path
@@ -180,7 +178,7 @@
 			this.startPathStyle(id, pathAttributes, percentageX, percentageY);
 		};
 
-		Element.prototype.startPathStyle = function(id, pathAttributes, percentageX, percentageY) {
+		Element.prototype.startPathStyle = function(id, pathAttributes, percentageX, percentageY, mirrorTag) {
 			var coordinateX = percentageX * this.clientWidth;
 			var coordinateY = percentageY * this.clientHeight;
 
@@ -197,29 +195,36 @@
 
 			this._paths[id] = pathNode;
 
-			this.emitMirror('startPathStyle', arguments);
+			this.emitMirror(mirrorTag, 'startPathStyle', arguments);
 		};
 
-		Element.prototype.extendPath = function(id, percentageX, percentageY) {
+		Element.prototype.extendPath = function(id, percentageX, percentageY, mirrorTag) {
 			var coordinateX = percentageX * this.clientWidth;
 			var coordinateY = percentageY * this.clientHeight;
 
 			if(typeof this._paths[id] == 'object') {
 				var pathNode = this._paths[id];
 				pathNode.setAttribute('d', pathNode.getAttribute('d') + ' ' + coordinateX + ',' + coordinateY);
-				this.emitMirror('extendPath', arguments);
+				this.emitMirror(mirrorTag, 'extendPath', arguments);
 			}
 		};
 
-		Element.prototype.endPath = function(id, percentageX, percentageY) {
+		Element.prototype.endPath = function(id, percentageX, percentageY, mirrorTag) {
 			if(typeof this._paths[id] == 'object')
 				delete this._paths[id];
-			this.emitMirror('endPath', arguments);
+			this.emitMirror(mirrorTag, 'endPath', arguments);
 		};
 
-		Element.prototype.emitMirror = function(functionName, functionArgs) {
+		Element.prototype.emitMirror = function(mirrorTag, functionName, functionArgs) {
+			if(typeof functionArgs == 'undefined')
+				functionArgs = [];
+
+			var emitMirrorDetail = {function: functionName, arguments: Array.prototype.slice.call(functionArgs)};
+			if(typeof mirrorTag != 'undefined')
+				emitMirrorDetail.tag = mirrorTag;
+
 			var emitEvent = document.createEvent('CustomEvent');
-			emitEvent.initCustomEvent('mirror', true, true, [functionName].concat(Array.prototype.slice.call(functionArgs)));
+			emitEvent.initCustomEvent('mirror', true, true, emitMirrorDetail);
 			this.dispatchEvent(emitEvent);
 		};
 
