@@ -269,13 +269,14 @@
 									elem.extendPath(id, eventPercentageX, eventPercentageY);
 								break;
 							case 'mouseup':
-								elem.mousedown = false;
-								elem.endPath(id, eventPercentageX, eventPercentageY);
+								if(elem.mousedown) {
+									elem.mousedown = false;
+									elem.endPath(id, eventPercentageX, eventPercentageY);
+								}
 								break;
 						}
 						break;
 				}
-
 			}
 
 			function touchHandler(event) {
