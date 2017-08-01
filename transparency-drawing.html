@@ -117,19 +117,21 @@
 				imageNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imageAttributes['href']);
 
 				// Support percentages
+				let imageWidth = 0;
+				let imageHeight = 0;
 				if(imageAttributes.width[imageAttributes.width.length - 1] == '%') {
-					let imageWidth = this.clientWidth * (parseFloat(imageAttributes.width.replace(/[^\d.-]/g, '')) / 100);
+					imageWidth = this.clientWidth * (parseFloat(imageAttributes.width.replace(/[^\d.-]/g, '')) / 100);
 				}
 				else {
-					let imageWidth = parseFloat(imageAttributes.width.replace(/[^\d.-]/g, ''));
+					imageWidth = parseFloat(imageAttributes.width.replace(/[^\d.-]/g, ''));
 				}
 
 				// Support percentages
 				if(imageAttributes.height[imageAttributes.height.length - 1] == '%') {
-					let imageHeight = this.clientHeight * (parseFloat(imageAttributes.height.replace(/[^\d.-]/g, '')) / 100);
+					imageHeight = this.clientHeight * (parseFloat(imageAttributes.height.replace(/[^\d.-]/g, '')) / 100);
 				}
 				else {
-					let imageHeight = parseFloat(imageAttributes.height.replace(/[^\d.-]/g, ''));
+					imageHeight = parseFloat(imageAttributes.height.replace(/[^\d.-]/g, ''));
 				}
 
 				imageNode.setAttribute('x', coordinateX - (imageWidth / 2));
