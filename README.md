@@ -1,5 +1,5 @@
 # My Component #
-Description
+A web component that allows for finger painting on a transparent canvas
 
 ## Installation ##
 
@@ -14,19 +14,25 @@ Description
 ## Usage ##
 
 	<!DOCTYPE html>
-	<html>
-	<head>
-		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	
-		<!-- Polyfill -->
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/webcomponentsjs/0.7.7/webcomponents.min.js"></script>
-
-		<link rel="import" href="my-component.html">
-	
-	</head>
-	<body>
-		<div style="width: 50%; height: 50%; display: block; background-color: #00ff00">
-			<my-component title="My title" subtitle="My subtitle"></my-component>
-		</div>
-	</body>
-	</html>
+    	<html>
+    	<head>
+    		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    	
+    		<!-- Polyfill -->
+    		<script src="https://cdnjs.cloudflare.com/ajax/libs/webcomponentsjs/1.0.4/webcomponents-lite.js"></script>
+    
+    		<link rel="import" href="transparency-drawing.html">
+    	
+    	</head>
+    	<body>
+    		<div style="width: 500px; height: 500px; display: block; background-color: #00ff00">
+    			<transparency-drawing></transparency-drawing>
+    		</div>
+    		<script>
+    			var mirrorIframe = document.querySelector('transparency-drawing');
+    			mirrorIframe.addEventListener('mirror', function(event) {
+    				console.log(event);
+    			});
+    		</script>
+    	</body>
+    	</html>

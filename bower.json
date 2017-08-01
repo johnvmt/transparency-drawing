@@ -1,5 +1,6 @@
 {
   "name": "transparency-drawing",
+  "version": "1.0.0",
   "description": "A web component that allows for finger painting on a transparent canvas",
   "authors": [
     { "name": "John Murphy-Teixidor", "email": "johnvmt@gmail.com" }

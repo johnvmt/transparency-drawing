@@ -26,424 +26,375 @@
 </template>
 
 <script>
-	(function(window, document) {
-		// Create references to this file and directory
-		var componentDoc =  (document._currentScript || document.currentScript).ownerDocument;
-		var componentDir = componentDoc.baseURI.substring(0, componentDoc.baseURI.lastIndexOf('/'));
-		var componentFile = componentDoc.baseURI.substring(componentDoc.baseURI.lastIndexOf('/') + 1);
-		var componentName = componentFile.substring(0, componentFile.lastIndexOf('.'));
+	(function() {
+		let componentDoc =  (document._currentScript || document.currentScript).ownerDocument;
+		let componentDir = componentDoc.baseURI.substring(0, componentDoc.baseURI.lastIndexOf('/'));
+		let componentFile = componentDoc.baseURI.substring(componentDoc.baseURI.lastIndexOf('/') + 1);
+		let componentName = componentFile.substring(0, componentFile.lastIndexOf('.'));
 
-		// Gets content from <template>
-		var template = componentDoc.querySelector('template').content;
+		class TransparencyDrawing extends HTMLElement {
 
-		// Set default element attributes
-		var elementAttributesDefault = {};
+			constructor() {
+				super(); // Always call super first in constructor
 
-		// Object constructor (but most should go into createdCalledback)
-		function Element() {
+				let thisElem = this;
 
-		}
+				thisElem._emitEvents = true;
 
-		// Inherits from HTMLElement
-		Element.prototype = Object.create(HTMLElement.prototype);
+				// Gets content from <template>
+				let shadow = this.attachShadow({mode: 'open'});
+				let template = componentDoc.querySelector('template').content;
+				shadow.appendChild(document.importNode(template, true));
 
-		Element.prototype.clear = function(mirrorTag) {
-			var drawingsNode = this._elements.drawings;
-			while (drawingsNode.firstChild) {
-				drawingsNode.removeChild(drawingsNode.firstChild);
+				this._elements = {
+					drawings: shadow.querySelector('svg #drawings')
+				};
+
+				this._paths = {};
+				this._images = {};
 			}
 
-			this.emitMirror(mirrorTag, 'clear', arguments);
-		};
-
-		Element.prototype.removeImage = function(imageId, mirrorTag) {
-			if(typeof this._images[imageId] == 'object') {
-				this._images[imageId].parentNode.removeChild(this._images[imageId]);
-				delete this._images[imageId];
-				this.emitMirror(mirrorTag, 'removeImage', arguments);
-			}
-		};
-
-		Element.prototype.addImage = function(percentageX, percentageY) {
-			// Capture path attributes from element attributes
-			var imageAttributes = {};
-			var imageAttributeKeyPrefix = 'image-'; // capture all attributes that start with path-
-			objectForEach(this.getAttributes(), function(attributeVal, attributeKey) {
-				if(attributeKey.indexOf(imageAttributeKeyPrefix) == 0)
-					imageAttributes[attributeKey.slice(imageAttributeKeyPrefix.length)] = attributeVal;
-			});
-
-			var imageAttributesDefault = {
-				'filter': 'url(#drop-shadow)'
-			};
-
-			imageAttributes = objectExtend(imageAttributesDefault, imageAttributes); // Merge defaults with passed params
-
-			var imageId = uniqueId();
-			this.addImageStyle(imageId, imageAttributes, percentageX, percentageY);
-		};
-
-		Element.prototype.addImageStyle = function(imageId, imageAttributes, percentageX, percentageY, mirrorTag) {
-			var elem = this;
-			var coordinateX = percentageX * this.clientWidth;
-			var coordinateY = percentageY * this.clientHeight;
-
-			var drawingsNode = this._elements.drawings;
-
-			// Capture image-* attributes from element attributes
-			var pathAttributes = {};
-			var pathAttributeKeyPrefix = 'path-'; // capture all attributes that start with path-
-			objectForEach(this.getAttributes(), function(attributeVal, attributeKey) {
-				if(attributeKey.indexOf(pathAttributeKeyPrefix) == 0)
-					pathAttributes[attributeKey.slice(pathAttributeKeyPrefix.length)] = attributeVal;
-			});
-
-			var imageNode = document.createElementNS('http://www.w3.org/2000/svg','image');
-
-			// Set the image src
-			imageNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imageAttributes['href']);
-
-			// Support percentages
-			if(imageAttributes.width[imageAttributes.width.length - 1] == '%')
-				var imageWidth = this.clientWidth * (Number(imageAttributes.width.replace(/[^\d.-]/g, '')) / 100);
-			else
-				var imageWidth = Number(imageAttributes.width.replace(/[^\d.-]/g, ''));
-
-			// Support percentages
-			if(imageAttributes.width[imageAttributes.height.length - 1] == '%')
-				var imageHeight = this.clientHeight * (Number(imageAttributes.height.replace(/[^\d.-]/g, '')) / 100);
-			else
-				var imageHeight = Number(imageAttributes.height.replace(/[^\d.-]/g, ''));
-
-			imageNode.setAttribute('x', coordinateX - (imageWidth / 2));
-			imageNode.setAttribute('y', coordinateY - (imageHeight / 2));
-
-			console.log("W-H", imageWidth, imageHeight);
-
-			imageNode.setAttribute('width', imageWidth);
-			imageNode.setAttribute('height', imageHeight);
-
-			objectForEach(imageAttributes, function(attributeVal, attributeKey) {
-				if(['href', 'width', 'height', 'id'].indexOf(attributeKey) < 0)
-					imageNode.setAttribute(attributeKey, attributeVal);
-			});
-
-			/*
-			 var imageAnimationNode = document.createElementNS('http://www.w3.org/2000/svg','animateTransform');
-			 imageAnimationNode.setAttribute('attributeType', "XML");
-			 imageAnimationNode.setAttribute('attributeName', "transform");
-			 imageAnimationNode.setAttribute('type', "scale");
-			 imageAnimationNode.setAttribute('from', "0");
-			 imageAnimationNode.setAttribute('to', "1");
-			 imageAnimationNode.setAttribute('dur', "10s");
-			 imageAnimationNode.setAttribute('repeatCount', "indefinite");
-			 imageNode.appendChild(imageAnimationNode);
-			 */
-
-			// Add handlers to remove image
-
-			imageNode.addEventListener('mousedown',function(event) {
-				event.stopPropagation();
-				event.preventDefault();
-				elem.removeImage(imageId);
-			});
-
-			imageNode.addEventListener('touchstart',function(event) {
-				event.stopPropagation();
-				event.preventDefault();
-				elem.removeImage(imageId);
-			});
-
-			elem._images[imageId] = imageNode;
-			drawingsNode.appendChild(imageNode);
-
-			this.emitMirror(mirrorTag, 'addImageStyle', arguments);
-		};
-
-		// Collector function to start a path
-		// Gather path attributes and pass to drawing function
-		Element.prototype.startPath = function(id, percentageX, percentageY) {
-
-			// Capture path attributes from element attributes
-			var pathAttributes = {};
-			var pathAttributeKeyPrefix = 'path-'; // capture all attributes that start with path-
-			objectForEach(this.getAttributes(), function(attributeVal, attributeKey) {
-				if(attributeKey.indexOf(pathAttributeKeyPrefix) == 0)
-					pathAttributes[attributeKey.slice(pathAttributeKeyPrefix.length)] = attributeVal;
-			});
-
-			var pathAttributesDefault = {
-				'fill': 'transparent',
-				'stroke': 'red',
-				'stroke-width': '10',
-				'stroke-linecap': 'round',
-				'filter': 'url(#drop-shadow)'
-			};
-
-			pathAttributes = objectExtend(pathAttributesDefault, pathAttributes); // Merge defaults with passed params
-
-			this.startPathStyle(id, pathAttributes, percentageX, percentageY);
-		};
-
-		Element.prototype.startPathStyle = function(id, pathAttributes, percentageX, percentageY, mirrorTag) {
-			var coordinateX = percentageX * this.clientWidth;
-			var coordinateY = percentageY * this.clientHeight;
-
-			var drawingsNode = this._elements.drawings;
-
-			var pathNode = document.createElementNS('http://www.w3.org/2000/svg','path');
-			pathNode.setAttribute('d', 'M' + coordinateX.toString() + ',' + coordinateY.toString());
-
-			objectForEach(pathAttributes, function(attributeVal, attributeKey) {
-				pathNode.setAttribute(attributeKey, attributeVal);
-			});
-
-			drawingsNode.appendChild(pathNode);
-
-			this._paths[id] = pathNode;
-
-			this.emitMirror(mirrorTag, 'startPathStyle', arguments);
-		};
-
-		Element.prototype.extendPath = function(id, percentageX, percentageY, mirrorTag) {
-			var coordinateX = percentageX * this.clientWidth;
-			var coordinateY = percentageY * this.clientHeight;
-
-			if(typeof this._paths[id] == 'object') {
-				var pathNode = this._paths[id];
-				pathNode.setAttribute('d', pathNode.getAttribute('d') + ' ' + coordinateX + ',' + coordinateY);
-				this.emitMirror(mirrorTag, 'extendPath', arguments);
-			}
-		};
-
-		Element.prototype.endPath = function(id, percentageX, percentageY, mirrorTag) {
-			if(typeof this._paths[id] == 'object')
-				delete this._paths[id];
-			this.emitMirror(mirrorTag, 'endPath', arguments);
-		};
-
-		Element.prototype.emitMirror = function(mirrorTag, functionName, functionArgs) {
-			if(typeof functionArgs == 'undefined')
-				functionArgs = [];
-
-			var emitMirrorDetail = {function: functionName, arguments: Array.prototype.slice.call(functionArgs)};
-			if(typeof mirrorTag != 'undefined')
-				emitMirrorDetail.tag = mirrorTag;
-
-			var emitEvent = document.createEvent('CustomEvent');
-			emitEvent.initCustomEvent('mirror', true, true, emitMirrorDetail);
-			this.dispatchEvent(emitEvent);
-		};
-
-		Element.prototype.addCanvasTouchHandlers = function() {
-			var elem = this;
-			var canvas = elem;
-
-			function getMode() {
-				var mode = elem.getAttribute('mode');
-				return (mode == undefined) ? 'path' : mode;
+			connectedCallback() {
+				this.addCanvasTouchHandlers();
 			}
 
-			function mouseHandler(event) {
-				event.stopPropagation();
-				event.preventDefault();
-				var id = 'mouse';
-				var mode = getMode();
-
-				var canvasBoundingClientRect = canvas.getBoundingClientRect();
-				var eventX = event.clientX - canvasBoundingClientRect.left;
-				var eventY = event.clientY - canvasBoundingClientRect.top;
-
-				var eventPercentageX = eventX / elem.clientWidth;
-				var eventPercentageY = eventY / elem.clientHeight;
-
-				switch(mode) {
-					case 'image':
-						switch(event.type) {
-							case 'mousedown':
-								elem.addImage(eventPercentageX, eventPercentageY);
-								break;
-						}
-						break;
-					case 'path':
-						switch(event.type) {
-							case 'mousedown':
-								elem.startPath(id, eventPercentageX, eventPercentageY);
-								elem.mousedown = true;
-								break;
-							case 'mousemove':
-								if(typeof elem.mousedown == 'boolean' && elem.mousedown)
-									elem.extendPath(id, eventPercentageX, eventPercentageY);
-								break;
-							case 'mouseup':
-								if(elem.mousedown) {
-									elem.mousedown = false;
-									elem.endPath(id, eventPercentageX, eventPercentageY);
-								}
-								break;
-						}
-						break;
+			clear(mirrorTag) {
+				let drawingsNode = this._elements.drawings;
+				while (drawingsNode.firstChild) {
+					drawingsNode.removeChild(drawingsNode.firstChild);
 				}
-			}
 
-			function touchHandler(event) {
-				event.stopPropagation();
-				event.preventDefault();
-				var mode = getMode();
-				var canvasBoundingClientRect = canvas.getBoundingClientRect();
+				this.emitMirror(mirrorTag, 'clear', arguments);
+			};
 
-				objectForEach(event.changedTouches, function(touch) {
-					var id = touch.identifier.toString();
+			removeImage(imageId, mirrorTag) {
+				if(typeof this._images[imageId] == 'object') {
+					this._images[imageId].parentNode.removeChild(this._images[imageId]);
+					delete this._images[imageId];
+					this.emitMirror(mirrorTag, 'removeImage', arguments);
+				}
+			};
 
-					var eventX = touch.clientX - canvasBoundingClientRect.left;
-					var eventY = touch.clientY - canvasBoundingClientRect.top;
+			addImage(percentageX, percentageY) {
+				// Capture path attributes from element attributes
+				let imageAttributes = {};
+				let imageAttributeKeyPrefix = 'image-'; // capture all attributes that start with path-
 
-					var eventPercentageX = eventX / elem.clientWidth;
-					var eventPercentageY = eventY / elem.clientHeight;
+				console.log("ATTR", this.attributes);
+				this._objectForEach(this.getAttributes(), function(attributeVal, attributeKey) {
+					if(attributeKey.indexOf(imageAttributeKeyPrefix) == 0)
+						imageAttributes[attributeKey.slice(imageAttributeKeyPrefix.length)] = attributeVal;
+				});
+
+				let imageAttributesDefault = {
+					'filter': 'url(#drop-shadow)'
+				};
+
+				imageAttributes = this._objectExtend(imageAttributesDefault, imageAttributes); // Merge defaults with passed params
+
+				let imageId = this._uniqueId();
+				this.addImageStyle(imageId, imageAttributes, percentageX, percentageY);
+			};
+
+			addImageStyle(imageId, imageAttributes, percentageX, percentageY, mirrorTag) {
+				let elem = this;
+				let coordinateX = percentageX * this.clientWidth;
+				let coordinateY = percentageY * this.clientHeight;
+
+				let drawingsNode = this._elements.drawings;
+
+				// Capture image-* attributes from element attributes
+				let pathAttributes = {};
+				let pathAttributeKeyPrefix = 'path-'; // capture all attributes that start with path-
+				objectForEach(this.getAttributes(), function(attributeVal, attributeKey) {
+					if(attributeKey.indexOf(pathAttributeKeyPrefix) == 0)
+						pathAttributes[attributeKey.slice(pathAttributeKeyPrefix.length)] = attributeVal;
+				});
+
+				let imageNode = document.createElementNS('http://www.w3.org/2000/svg','image');
+
+				// Set the image src
+				imageNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imageAttributes['href']);
+
+				// Support percentages
+				if(imageAttributes.width[imageAttributes.width.length - 1] == '%') {
+					let imageWidth = this.clientWidth * (parseFloat(imageAttributes.width.replace(/[^\d.-]/g, '')) / 100);
+				}
+				else {
+					let imageWidth = parseFloat(imageAttributes.width.replace(/[^\d.-]/g, ''));
+				}
+
+				// Support percentages
+				if(imageAttributes.height[imageAttributes.height.length - 1] == '%') {
+					let imageHeight = this.clientHeight * (parseFloat(imageAttributes.height.replace(/[^\d.-]/g, '')) / 100);
+				}
+				else {
+					let imageHeight = parseFloat(imageAttributes.height.replace(/[^\d.-]/g, ''));
+				}
+
+				imageNode.setAttribute('x', coordinateX - (imageWidth / 2));
+				imageNode.setAttribute('y', coordinateY - (imageHeight / 2));
+
+				console.log("W-H", imageWidth, imageHeight);
+
+				imageNode.setAttribute('width', imageWidth);
+				imageNode.setAttribute('height', imageHeight);
+
+				objectForEach(imageAttributes, function(attributeVal, attributeKey) {
+					if(['href', 'width', 'height', 'id'].indexOf(attributeKey) < 0)
+						imageNode.setAttribute(attributeKey, attributeVal);
+				});
+
+				/*
+				 var imageAnimationNode = document.createElementNS('http://www.w3.org/2000/svg','animateTransform');
+				 imageAnimationNode.setAttribute('attributeType', "XML");
+				 imageAnimationNode.setAttribute('attributeName', "transform");
+				 imageAnimationNode.setAttribute('type', "scale");
+				 imageAnimationNode.setAttribute('from', "0");
+				 imageAnimationNode.setAttribute('to', "1");
+				 imageAnimationNode.setAttribute('dur', "10s");
+				 imageAnimationNode.setAttribute('repeatCount', "indefinite");
+				 imageNode.appendChild(imageAnimationNode);
+				 */
+
+				// Add handlers to remove image
+
+				imageNode.addEventListener('mousedown',function(event) {
+					event.stopPropagation();
+					event.preventDefault();
+					elem.removeImage(imageId);
+				});
+
+				imageNode.addEventListener('touchstart',function(event) {
+					event.stopPropagation();
+					event.preventDefault();
+					elem.removeImage(imageId);
+				});
+
+				elem._images[imageId] = imageNode;
+				drawingsNode.appendChild(imageNode);
+
+				this.emitMirror(mirrorTag, 'addImageStyle', arguments);
+			};
+
+			// Collector function to start a path
+			// Gather path attributes and pass to drawing function
+			startPath(id, percentageX, percentageY) {
+				// Capture path attributes from element attributes
+				let pathAttributes = {};
+				let pathAttributeKeyPrefix = 'path-'; // capture all attributes that start with path-
+				this._objectForEach(this.getAttributes(), function(attributeVal, attributeKey) {
+					if(attributeKey.indexOf(pathAttributeKeyPrefix) == 0)
+						pathAttributes[attributeKey.slice(pathAttributeKeyPrefix.length)] = attributeVal;
+				});
+
+				let pathAttributesDefault = {
+					'fill': 'transparent',
+					'stroke': 'red',
+					'stroke-width': '10',
+					'stroke-linecap': 'round',
+					'filter': 'url(#drop-shadow)'
+				};
+
+				pathAttributes = this._objectExtend(pathAttributesDefault, pathAttributes); // Merge defaults with passed params
+
+				this.startPathStyle(id, pathAttributes, percentageX, percentageY);
+			};
+
+			startPathStyle(id, pathAttributes, percentageX, percentageY, mirrorTag) {
+				console.log("START", percentageX);
+
+				let coordinateX = percentageX * this.clientWidth;
+				let coordinateY = percentageY * this.clientHeight;
+
+				let drawingsNode = this._elements.drawings;
+
+				let pathNode = document.createElementNS('http://www.w3.org/2000/svg','path');
+				pathNode.setAttribute('d', 'M' + coordinateX.toString() + ',' + coordinateY.toString());
+
+				this._objectForEach(pathAttributes, function(attributeVal, attributeKey) {
+					pathNode.setAttribute(attributeKey, attributeVal);
+				});
+
+				drawingsNode.appendChild(pathNode);
+
+				this._paths[id] = pathNode;
+
+				this.emitMirror(mirrorTag, 'startPathStyle', arguments);
+			};
+
+			extendPath(id, percentageX, percentageY, mirrorTag) {
+				// TODO fix this
+				let coordinateX = percentageX * this.shadowRoot.querySelector('svg').clientWidth;
+				let coordinateY = percentageY * this.shadowRoot.querySelector('svg').clientHeight;
+
+				if(typeof this._paths[id] == 'object') {
+					let pathNode = this._paths[id];
+					pathNode.setAttribute('d', pathNode.getAttribute('d') + ' ' + coordinateX + ',' + coordinateY);
+					this.emitMirror(mirrorTag, 'extendPath', arguments);
+				}
+			};
+
+			endPath(id, percentageX, percentageY, mirrorTag) {
+				if(typeof this._paths[id] == 'object')
+					delete this._paths[id];
+				this.emitMirror(mirrorTag, 'endPath', arguments);
+			};
+
+			emitMirror(mirrorTag, functionName, functionArgs) {
+				if(typeof functionArgs == 'undefined')
+					functionArgs = [];
+
+				let emitMirrorDetail = {function: functionName, arguments: Array.prototype.slice.call(functionArgs)};
+				if(typeof mirrorTag != 'undefined')
+					emitMirrorDetail.tag = mirrorTag;
+
+				let emitEvent = document.createEvent('CustomEvent');
+				emitEvent.initCustomEvent('mirror', true, true, emitMirrorDetail);
+				this.dispatchEvent(emitEvent);
+			};
+
+			addCanvasTouchHandlers() {
+				let elem = this;
+				let canvas = elem;
+
+				function getMode() {
+					let mode = elem.getAttribute('mode');
+					return (mode == undefined) ? 'path' : mode;
+				}
+
+				function mouseHandler(event) {
+					event.stopPropagation();
+					event.preventDefault();
+					let id = 'mouse';
+					let mode = getMode();
+
+					let canvasBoundingClientRect = canvas.getBoundingClientRect();
+
+					let eventX = event.clientX - canvasBoundingClientRect.left;
+					let eventY = event.clientY - canvasBoundingClientRect.top;
+
+					let eventPercentageX = eventX / elem.shadowRoot.querySelector('svg').clientWidth;
+					let eventPercentageY = eventY / elem.shadowRoot.querySelector('svg').clientHeight;
 
 					switch(mode) {
 						case 'image':
 							switch(event.type) {
-								case 'touchstart':
+								case 'mousedown':
 									elem.addImage(eventPercentageX, eventPercentageY);
 									break;
 							}
 							break;
 						case 'path':
-							switch (event.type) {
-								case 'touchstart':
+							switch(event.type) {
+								case 'mousedown':
 									elem.startPath(id, eventPercentageX, eventPercentageY);
+									elem.mousedown = true;
 									break;
-								case 'touchmove':
-									elem.extendPath(id, eventPercentageX, eventPercentageY);
+								case 'mousemove':
+									if(typeof elem.mousedown == 'boolean' && elem.mousedown)
+										elem.extendPath(id, eventPercentageX, eventPercentageY);
 									break;
-								case 'touchend':
-									elem.endPath(id, eventPercentageX, eventPercentageY);
+								case 'mouseup':
+									if(elem.mousedown) {
+										elem.mousedown = false;
+										elem.endPath(id, eventPercentageX, eventPercentageY);
+									}
 									break;
 							}
 							break;
 					}
-				});
-			}
+				}
 
-			canvas.addEventListener('mousedown', mouseHandler, false);
-			canvas.addEventListener('mousemove', mouseHandler, false);
-			window.addEventListener('mouseup', mouseHandler, false);
-			canvas.addEventListener('touchstart', touchHandler, false);
-			canvas.addEventListener('touchmove', touchHandler, false);
-			canvas.addEventListener('touchend', touchHandler, false);
-		};
+				function touchHandler(event) {
+					event.stopPropagation();
+					event.preventDefault();
+					let mode = getMode();
+					let canvasBoundingClientRect = canvas.getBoundingClientRect();
 
-		// Fires when an instance of the element is created
-		Element.prototype.createdCallback = function() {
-			// Creates the shadow root
-			this.shadowRoot = this.createShadowRoot();
+					objectForEach(event.changedTouches, function(touch) {
+						let id = touch.identifier.toString();
 
-			// Adds a template clone into shadow root
-			this.shadowRoot.appendChild(document.importNode(template, true));
+						let eventX = touch.clientX - canvasBoundingClientRect.left;
+						let eventY = touch.clientY - canvasBoundingClientRect.top;
 
-			this._elements = {
-				'drawings': this.shadowRoot.querySelector('svg #drawings')
+						let eventPercentageX = eventX / elem.clientWidth;
+						let eventPercentageY = eventY / elem.clientHeight;
+
+						switch(mode) {
+							case 'image':
+								switch(event.type) {
+									case 'touchstart':
+										elem.addImage(eventPercentageX, eventPercentageY);
+										break;
+								}
+								break;
+							case 'path':
+								switch (event.type) {
+									case 'touchstart':
+										elem.startPath(id, eventPercentageX, eventPercentageY);
+										break;
+									case 'touchmove':
+										elem.extendPath(id, eventPercentageX, eventPercentageY);
+										break;
+									case 'touchend':
+										elem.endPath(id, eventPercentageX, eventPercentageY);
+										break;
+								}
+								break;
+						}
+					});
+				}
+
+				canvas.addEventListener('mousedown', mouseHandler, false);
+				canvas.addEventListener('mousemove', mouseHandler, false);
+				window.addEventListener('mouseup', mouseHandler, false);
+				canvas.addEventListener('touchstart', touchHandler, false);
+				canvas.addEventListener('touchmove', touchHandler, false);
+				canvas.addEventListener('touchend', touchHandler, false);
 			};
 
-			this._paths = {};
-			this._images = {};
+			_objectExtend() {
+				let merged = {};
+				this._objectForEach(arguments, function(argument) {
+					for(let attrname in argument) {
+						if(argument.hasOwnProperty(attrname))
+							merged[attrname] = argument[attrname];
+					}
+				});
+				return merged;
 
-			// get and merge params from bullet-point element
-			this.elementAttributes = objectExtend(elementAttributesDefault, this.getAttributes());
-
-			// Triggered when the window is resized
-			window.addEventListener('resize', function() {
-
-			});
-
-			this.addCanvasTouchHandlers();
-		};
-
-		/* Component utility Functions */
-		// Get all attributes of element
-		Element.prototype.getAttributes = function(target) {
-			if(typeof target === 'undefined')
-				target = this;
-
-			var attributes = {};
-			for(var ctr = 0; ctr < target.attributes.length; ctr++) {
-				attributes[target.attributes[ctr].nodeName] = target.attributes[ctr].nodeValue;
 			}
-			return attributes;
-		};
 
-		Element.prototype.getAttribute = function(attributeName, target) {
-			if(typeof target === 'undefined')
-				target = this;
-
-			for(var ctr = 0; ctr < target.attributes.length; ctr++) {
-				if(target.attributes[ctr].nodeName === attributeName)
-					return target.attributes[ctr].nodeValue;
-			}
-			return undefined;
-		};
-
-		/* Utility Functions */
-		// Add observers to an element
-		function addElementObserver(element, mutations, listener) {
-			// possible mutations: 	attributes, childList, characterData
-			var observer = new MutationObserver(listener);
-
-			if(mutations.length > 0) {
-				var observerConfig = {};
-				for(var mutationIndex = 0; mutationIndex < mutations.length; mutationIndex++) {
-					observerConfig[mutations[mutationIndex]] = true;
+			_objectForEach(object, callback) {
+				// run function on each property (child) of object
+				for(let property in object) { // pull keys before looping through?
+					if (object.hasOwnProperty(property))
+						callback(object[property], property, object);
 				}
-				observer.observe(element, observerConfig);
 			}
 
-			return observer;
-			// Returned observer can be removed with observer.disconnect()
-		}
-
-		// Add event triggers for an element
-		function addElementEventListener(element, events, listener) {
-			// if string (single event) passed, convert to Array
-			if(!Array.isArray(events))
-				events = [events];
-
-			for(var eventIndex = 0; eventIndex < events.length; eventIndex++) {
-				element.addEventListener(events[eventIndex], listener);
-			}
-		}
-
-		// Return sum of all objects passed as new object, with later arguments overwriting
-		function objectExtend() {
-			var merged = {};
-			objectForEach(arguments, function(argument) {
-				for (var attrname in argument) {
-					if(argument.hasOwnProperty(attrname))
-						merged[attrname] = argument[attrname];
+			_uniqueId() {
+				function s4() {
+					return Math.floor((1 + Math.random()) * 0x10000)
+						.toString(16)
+						.substring(1);
 				}
-			});
-			return merged;
-
-		}
-
-		function objectForEach(object, callback) {
-			// run function on each property (child) of object
-			for(var property in object) { // pull keys before looping through?
-				if (object.hasOwnProperty(property))
-					callback(object[property], property, object);
+				return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+					s4() + '-' + s4() + s4() + s4();
 			}
+
+			getAttributes(target) {
+				if(typeof target === 'undefined')
+					target = this;
+				let attributes = {};
+				for(let ctr = 0; ctr < target.attributes.length; ctr++) {
+					attributes[target.attributes[ctr].nodeName] = target.attributes[ctr].nodeValue;
+				}
+				return attributes;
+			};
 		}
 
-		function uniqueId() {
-			function s4() {
-				return Math.floor((1 + Math.random()) * 0x10000)
-					.toString(16)
-					.substring(1);
-			}
-			return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-				s4() + '-' + s4() + s4() + s4();
-		}
-
-		document.registerElement(componentName, Element);
-	})(window, document);
+		customElements.define('transparency-drawing', TransparencyDrawing);
+	})();
 </script>

@@ -1,6 +1,6 @@
 {
   "name": "transparency-drawing",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "A web component that allows for finger painting on a transparent canvas",
   "private": true,
   "author": {
