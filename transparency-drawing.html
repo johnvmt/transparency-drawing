@@ -1,4 +1,4 @@
-<template>
+<template is="transparency-drawing">
 	<style>
 		:host {
 			display: block;
@@ -43,11 +43,11 @@
 
 				// Gets content from <template>
 				let shadow = this.attachShadow({mode: 'open'});
-				let template = componentDoc.querySelector('template').content;
+				let template = componentDoc.querySelector('template[is=transparency-drawing]').content;
 				shadow.appendChild(document.importNode(template, true));
 
 				this._elements = {
-					drawings: shadow.querySelector('svg #drawings')
+
 				};
 
 				this._paths = {};
@@ -55,6 +55,7 @@
 			}
 
 			connectedCallback() {
+				this._elements.drawings = this.shadowRoot.querySelector('svg #drawings')
 				this.addCanvasTouchHandlers();
 			}
 
@@ -80,7 +81,6 @@
 				let imageAttributes = {};
 				let imageAttributeKeyPrefix = 'image-'; // capture all attributes that start with path-
 
-				console.log("ATTR", this.attributes);
 				this._objectForEach(this.getAttributes(), function(attributeVal, attributeKey) {
 					if(attributeKey.indexOf(imageAttributeKeyPrefix) == 0)
 						imageAttributes[attributeKey.slice(imageAttributeKeyPrefix.length)] = attributeVal;
@@ -136,8 +136,6 @@
 
 				imageNode.setAttribute('x', coordinateX - (imageWidth / 2));
 				imageNode.setAttribute('y', coordinateY - (imageHeight / 2));
-
-				console.log("W-H", imageWidth, imageHeight);
 
 				imageNode.setAttribute('width', imageWidth);
 				imageNode.setAttribute('height', imageHeight);
@@ -204,8 +202,6 @@
 			};
 
 			startPathStyle(id, pathAttributes, percentageX, percentageY, mirrorTag) {
-				console.log("START", percentageX);
-
 				let coordinateX = percentageX * this.clientWidth;
 				let coordinateY = percentageY * this.clientHeight;
 
