@@ -7,7 +7,7 @@
 		}
 	</style>
 	<div style="width: 100%; height: 100%;">
-		<svg style="width: 100%; height: 100%;" xmlns="http://www.w3.org/2000/svg">
+		<svg style="position: absolute; top: 0; left: 0; z-index: 1; width: 100%; height: 100%;" xmlns="http://www.w3.org/2000/svg">
 			<defs>
 				<filter id="drop-shadow">
 					<feGaussianBlur in="SourceAlpha" stdDeviation="2.2"/>
@@ -22,6 +22,7 @@
 			</defs>
 			<g id="drawings"></g>
 		</svg>
+		<slot style="position: relative; top: -100%; left: 0; z-index: 0; width: 100%; height: 100%;"></slot>
 	</div>
 </template>
 
@@ -47,17 +48,30 @@
 				shadow.appendChild(document.importNode(template, true));
 
 				this._elements = {
-
+					svg: shadow.querySelector('svg'),
+					canvas: shadow.querySelector('#touchcanvas')
 				};
 
 				this._paths = {};
 				this._images = {};
+
+				if(this.hasAttribute('passthrough'))
+					this.passthrough(this.getAttribute('passthrough'));
 			}
 
 			connectedCallback() {
-				this._elements.drawings = this.shadowRoot.querySelector('svg #drawings')
+				this._elements.drawings = this.shadowRoot.querySelector('svg #drawings');
 				this.addCanvasTouchHandlers();
 			}
+
+			static get observedAttributes() {
+				return ['passthrough'];
+			}
+
+			attributeChangedCallback(attributeName, oldVal, newVal) {
+				if(attributeName == 'passthrough' && oldVal != newVal)
+					this.passthrough(newVal);
+			};
 
 			clear(mirrorTag) {
 				let drawingsNode = this._elements.drawings;
@@ -67,6 +81,17 @@
 
 				this.emitMirror(mirrorTag, 'clear', arguments);
 			};
+
+			passthrough(passthrough, mirrorTag) {
+				if(typeof passthrough != "boolean")
+					passthrough = Boolean(passthrough);
+
+				this._elements.svg.style['pointer-events'] = passthrough ? "none" : "auto";
+
+				this.setAttribute('passthrough', passthrough);
+
+				this.emitMirror(mirrorTag, 'passthrough', [passthrough]);
+			}
 
 			removeImage(imageId, mirrorTag) {
 				if(typeof this._images[imageId] == 'object') {
@@ -106,7 +131,7 @@
 				// Capture image-* attributes from element attributes
 				let pathAttributes = {};
 				let pathAttributeKeyPrefix = 'path-'; // capture all attributes that start with path-
-				objectForEach(this.getAttributes(), function(attributeVal, attributeKey) {
+				elem._objectForEach(this.getAttributes(), function(attributeVal, attributeKey) {
 					if(attributeKey.indexOf(pathAttributeKeyPrefix) == 0)
 						pathAttributes[attributeKey.slice(pathAttributeKeyPrefix.length)] = attributeVal;
 				});
@@ -140,7 +165,7 @@
 				imageNode.setAttribute('width', imageWidth);
 				imageNode.setAttribute('height', imageHeight);
 
-				objectForEach(imageAttributes, function(attributeVal, attributeKey) {
+				elem._objectForEach(imageAttributes, function(attributeVal, attributeKey) {
 					if(['href', 'width', 'height', 'id'].indexOf(attributeKey) < 0)
 						imageNode.setAttribute(attributeKey, attributeVal);
 				});
@@ -310,7 +335,7 @@
 					let mode = getMode();
 					let canvasBoundingClientRect = canvas.getBoundingClientRect();
 
-					objectForEach(event.changedTouches, function(touch) {
+					elem._objectForEach(event.changedTouches, function(touch) {
 						let id = touch.identifier.toString();
 
 						let eventX = touch.clientX - canvasBoundingClientRect.left;
