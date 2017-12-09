@@ -82,8 +82,16 @@
 				this.emitMirror(mirrorTag, 'clear', arguments);
 			};
 
+			passthroughAndClear(passthrough, mirrorTag) {
+				this.clear();
+				this.passthrough(passthrough, mirrorTag);
+			}
+
 			passthrough(passthrough, mirrorTag) {
-				if(typeof passthrough != "boolean")
+				if(typeof passthrough == 'string' && passthrough.toLowerCase() == 'false')
+					passthrough = false;
+
+				if(typeof passthrough != 'boolean')
 					passthrough = Boolean(passthrough);
 
 				this._elements.svg.style['pointer-events'] = passthrough ? "none" : "auto";
