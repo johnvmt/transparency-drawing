@@ -1,5 +1,5 @@
 # My Component #
-A web component that allows for finger painting on a transparent canvas
+A web component that allows for finger painting or image stamping on a transparent canvas
 
 ## Installation ##
 
@@ -11,28 +11,29 @@ A web component that allows for finger painting on a transparent canvas
 
 	npm install
 
+## Options ##
+
+| Attribute Name 	| Description                                                                                                        	|
+|----------------	|--------------------------------------------------------------------------------------------------------------------	|
+| passthrough    	| all: passes through all clicks/touches none: captures all clicks/touches auto: clicks/touches bubble up to drawing 	|
+| mode           	| image: add an image path: draw a line                                                                              	|
+| path-*         	| Apply attributes to path                                                                                           	|
+| image-*        	| Apply attributes to image stamp                                                                                    	|
+
 ## Usage ##
 
-	<!DOCTYPE html>
-    	<html>
-    	<head>
-    		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    	
-    		<!-- Polyfill -->
-    		<script src="https://cdnjs.cloudflare.com/ajax/libs/webcomponentsjs/1.0.4/webcomponents-lite.js"></script>
-    
-    		<link rel="import" href="transparency-drawing.html">
-    	
-    	</head>
-    	<body>
-    		<div style="width: 500px; height: 500px; display: block; background-color: #00ff00">
-    			<transparency-drawing></transparency-drawing>
-    		</div>
-    		<script>
-    			var mirrorIframe = document.querySelector('transparency-drawing');
-    			mirrorIframe.addEventListener('mirror', function(event) {
-    				console.log(event);
-    			});
-    		</script>
-    	</body>
-    	</html>
+### Path mode ###
+
+	<transparency-drawing passthrough="auto" mode="path" path-stroke="#00ff00" path-stroke-width="10" path-stroke-opacity="0.5" id="drawing1" style="position: absolute; top: 0; left: 0; width: 75%; height: 50%; border: 2px solid #000000; display: block;">
+		<div style="width: 100%; height: 100%; border: 2px solid #0000ff;">
+			<a href="http://cnn.com">CNN</a>
+		</div>
+	</transparency-drawing>
+
+### Image mode ###
+
+	<transparency-drawing passthrough="auto" mode="image" image-href="image.png" image-height="10%" image-width="10%" style="position: absolute; top: 0; left: 0; width: 75%; height: 50%; border: 2px solid #000000; display: block;">
+		<div style="width: 100%; height: 100%; border: 2px solid #0000ff;">
+			<a href="http://cnn.com">CNN</a>
+		</div>
+	</transparency-drawing>

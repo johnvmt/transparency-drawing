@@ -40,28 +40,26 @@
 
 				let thisElem = this;
 
-				thisElem._emitEvents = true;
-
 				// Gets content from <template>
 				let shadow = this.attachShadow({mode: 'open'});
 				let template = componentDoc.querySelector('template[is=transparency-drawing]').content;
 				shadow.appendChild(document.importNode(template, true));
 
 				this._elements = {
-					svg: shadow.querySelector('svg'),
-					canvas: shadow.querySelector('#touchcanvas')
+					svg: shadow.querySelector('svg')
 				};
 
 				this._paths = {};
 				this._images = {};
 
-				if(this.hasAttribute('passthrough'))
-					this.passthrough(this.getAttribute('passthrough'));
+				this._eventHandlers = [];
+
+
 			}
 
 			connectedCallback() {
 				this._elements.drawings = this.shadowRoot.querySelector('svg #drawings');
-				this.addCanvasTouchHandlers();
+				this.passthrough(this.getAttribute('passthrough'));
 			}
 
 			static get observedAttributes() {
@@ -87,18 +85,27 @@
 				this.passthrough(passthrough, mirrorTag);
 			}
 
-			passthrough(passthrough, mirrorTag) {
-				if(typeof passthrough == 'string' && passthrough.toLowerCase() == 'false')
-					passthrough = false;
+			passthrough(stringValue, mirrorTag, emitMirror) {
+				let thisElem = this;
+				let passthroughMode = (typeof stringValue === 'string' && ['auto', 'all', 'none'].indexOf(stringValue.toLowerCase()) >= 0) ? stringValue.toLowerCase() : 'auto';
 
-				if(typeof passthrough != 'boolean')
-					passthrough = Boolean(passthrough);
+				switch(passthroughMode) {
+					case 'auto':
+						thisElem._elements.svg.style['pointer-events'] = 'none';
+						thisElem.addCanvasTouchHandlers(thisElem);
+						break;
+					case 'none':
+						thisElem._elements.svg.style['pointer-events'] = 'auto';
+						thisElem.addCanvasTouchHandlers(thisElem._elements.svg);
+						break;
+					case 'all':
+						thisElem._elements.svg.style['pointer-events'] = 'none';
+						thisElem.removeCanvasTouchHandlers();
+						break;
+				}
 
-				this._elements.svg.style['pointer-events'] = passthrough ? "none" : "auto";
-
-				this.setAttribute('passthrough', passthrough);
-
-				this.emitMirror(mirrorTag, 'passthrough', [passthrough]);
+				if(typeof emitMirror === 'undefined' || emitMirror)
+					this.emitMirror(mirrorTag, 'passthrough', [passthroughMode]);
 			}
 
 			removeImage(imageId, mirrorTag) {
@@ -177,18 +184,6 @@
 					if(['href', 'width', 'height', 'id'].indexOf(attributeKey) < 0)
 						imageNode.setAttribute(attributeKey, attributeVal);
 				});
-
-				/*
-				 var imageAnimationNode = document.createElementNS('http://www.w3.org/2000/svg','animateTransform');
-				 imageAnimationNode.setAttribute('attributeType', "XML");
-				 imageAnimationNode.setAttribute('attributeName', "transform");
-				 imageAnimationNode.setAttribute('type', "scale");
-				 imageAnimationNode.setAttribute('from', "0");
-				 imageAnimationNode.setAttribute('to', "1");
-				 imageAnimationNode.setAttribute('dur', "10s");
-				 imageAnimationNode.setAttribute('repeatCount', "indefinite");
-				 imageNode.appendChild(imageAnimationNode);
-				 */
 
 				// Add handlers to remove image
 
@@ -285,13 +280,26 @@
 				this.dispatchEvent(emitEvent);
 			};
 
-			addCanvasTouchHandlers() {
+			removeCanvasTouchHandlers() {
 				let elem = this;
-				let canvas = elem;
+
+				// Remove previous handler
+				elem._eventHandlers.forEach(function(handler) {
+					handler.types.forEach(function(type) {
+						handler.target.removeEventListener(type, handler.listener)
+					})
+				});
+				elem._eventHandlers = [];
+			}
+
+			addCanvasTouchHandlers(targetElem) {
+				let elem = this;
+
+				elem.removeCanvasTouchHandlers();
 
 				function getMode() {
 					let mode = elem.getAttribute('mode');
-					return (mode == undefined) ? 'path' : mode;
+					return (mode === undefined) ? 'path' : mode;
 				}
 
 				function mouseHandler(event) {
@@ -300,7 +308,7 @@
 					let id = 'mouse';
 					let mode = getMode();
 
-					let canvasBoundingClientRect = canvas.getBoundingClientRect();
+					let canvasBoundingClientRect = targetElem.getBoundingClientRect();
 
 					let eventX = event.clientX - canvasBoundingClientRect.left;
 					let eventY = event.clientY - canvasBoundingClientRect.top;
@@ -341,7 +349,7 @@
 					event.stopPropagation();
 					event.preventDefault();
 					let mode = getMode();
-					let canvasBoundingClientRect = canvas.getBoundingClientRect();
+					let canvasBoundingClientRect = targetElem.getBoundingClientRect();
 
 					elem._objectForEach(event.changedTouches, function(touch) {
 						let id = touch.identifier.toString();
@@ -377,12 +385,33 @@
 					});
 				}
 
-				canvas.addEventListener('mousedown', mouseHandler, false);
-				canvas.addEventListener('mousemove', mouseHandler, false);
+				//elem.addEventListener('mousedown', elementListener, false);
+				//elem.addEventListener('mousemove', elementListener, false);
+
+				elem._eventHandlers.push({
+					target: targetElem,
+					types: ['mousedown', 'mousemove'],
+					listener: mouseHandler
+				});
+
+				elem._eventHandlers.push({
+					target: window,
+					types: ['mouseup'],
+					listener: mouseHandler
+				});
+
+				elem._eventHandlers.push({
+					target: targetElem,
+					types: ['touchstart', 'touchmove', 'touchend'],
+					listener: touchHandler
+				});
+
+				targetElem.addEventListener('mousedown', mouseHandler, false);
+				targetElem.addEventListener('mousemove', mouseHandler, false);
 				window.addEventListener('mouseup', mouseHandler, false);
-				canvas.addEventListener('touchstart', touchHandler, false);
-				canvas.addEventListener('touchmove', touchHandler, false);
-				canvas.addEventListener('touchend', touchHandler, false);
+				targetElem.addEventListener('touchstart', touchHandler, false);
+				targetElem.addEventListener('touchmove', touchHandler, false);
+				targetElem.addEventListener('touchend', touchHandler, false);
 			};
 
 			_objectExtend() {

@@ -1,7 +1,7 @@
 {
   "name": "transparency-drawing",
-  "version": "1.0.4",
-  "description": "A web component that allows for finger painting on a transparent canvas",
+  "version": "1.1.0",
+  "description": "A web component that allows for finger painting and image stamping on a transparent canvas",
   "authors": [
     { "name": "John Murphy-Teixidor", "email": "johnvmt@gmail.com" }
   ],
