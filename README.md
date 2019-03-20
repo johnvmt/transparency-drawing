@@ -3,10 +3,6 @@ A web component that allows for finger painting or image stamping on a transpare
 
 ## Installation ##
 
-### Bower ###
-	
-	bower install
-
 ### Node ###
 
 	npm install
@@ -15,12 +11,14 @@ A web component that allows for finger painting or image stamping on a transpare
 
 | Attribute Name 	| Description                                                                                                        	|
 |----------------	|--------------------------------------------------------------------------------------------------------------------	|
-| passthrough    	| all: passes through all clicks/touches none: captures all clicks/touches auto: clicks/touches bubble up to drawing 	|
+| passthrough    	| all: passes through all clicks/touches none: captures all clicks/touches auto: clicks/touches bubble up to drawing (doesn't work with image mode)  	|
 | mode           	| image: add an image path: draw a line                                                                              	|
 | path-*         	| Apply attributes to path                                                                                           	|
 | image-*        	| Apply attributes to image stamp                                                                                    	|
 
 ## Usage ##
+
+    <script type="module" src="transparency-drawing.js"></script>
 
 ### Path mode ###
 
