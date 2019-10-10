@@ -1,16 +1,14 @@
 {
   "name": "transparency-drawing",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "A web component that allows for finger painting and image stamping on a transparent canvas",
   "private": true,
   "author": {
     "name": "John Murphy-Teixidor",
     "email": "johnvmt@gmail.com"
   },
-  "devDependencies": {
-  },
-  "dependencies": {
-  },
+  "main": "TransparencyDrawing.js",
+  "module": "TransparencyDrawing.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/johnvmt/transparency-drawing.git"

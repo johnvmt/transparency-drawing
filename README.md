@@ -18,7 +18,7 @@ A web component that allows for finger painting or image stamping on a transpare
 
 ## Usage ##
 
-    <script type="module" src="transparency-drawing.js"></script>
+    <script type="module" src="TransparencyDrawing.js"></script>
 
 ### Path mode ###
 
