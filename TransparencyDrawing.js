@@ -62,11 +62,11 @@ class TransparencyDrawing extends HTMLElement {
 			drawingsNode.removeChild(drawingsNode.firstChild);
 		}
 
-		this.emitMirror(mirrorTag, 'clear', arguments);
+		this.emitMirror(mirrorTag, 'clear', []);
 	};
 
 	passthroughAndClear(passthrough, mirrorTag) {
-		this.clear();
+		this.clear(mirrorTag);
 		this.passthrough(passthrough, mirrorTag);
 	}
 
@@ -97,7 +97,7 @@ class TransparencyDrawing extends HTMLElement {
 		if(typeof this._images[imageId] === 'object') {
 			this._images[imageId].parentNode.removeChild(this._images[imageId]);
 			delete this._images[imageId];
-			this.emitMirror(mirrorTag, 'removeImage', arguments);
+			this.emitMirror(mirrorTag, 'removeImage', [imageId]);
 		}
 	};
 
