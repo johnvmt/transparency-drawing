@@ -62,7 +62,7 @@ class TransparencyDrawing extends HTMLElement {
 			drawingsNode.removeChild(drawingsNode.firstChild);
 		}
 
-		this.emitMirror(mirrorTag, 'clear', arguments);
+		this.emitMirror(mirrorTag, 'clear', []);
 	};
 
 	passthroughAndClear(passthrough, mirrorTag) {
@@ -119,16 +119,16 @@ class TransparencyDrawing extends HTMLElement {
 
 		imageAttributes = Object.assign(imageAttributesDefault, imageAttributes); // Merge defaults with passed params
 
-		let imageId = this._uniqueId();
+		const imageId = this._uniqueId();
 		this.addImageStyle(imageId, imageAttributes, percentageX, percentageY);
 	};
 
 	addImageStyle(imageId, imageAttributes, percentageX, percentageY, mirrorTag) {
-		let thisElem = this;
-		let coordinateX = percentageX * this.clientWidth;
-		let coordinateY = percentageY * this.clientHeight;
+		const thisElem = this;
+		const coordinateX = percentageX * thisElem.clientWidth;
+		const coordinateY = percentageY * thisElem.clientHeight;
 
-		let drawingsNode = this._elements.drawings;
+		let drawingsNode = thisElem._elements.drawings;
 
 		// Capture image-* attributes from element attributes
 		let pathAttributes = {};
@@ -147,41 +147,33 @@ class TransparencyDrawing extends HTMLElement {
 		imageNode.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imageAttributes['href']);
 
 		// Support percentages
-		let imageWidth = 0;
-		let imageHeight = 0;
-		if(imageAttributes.width[imageAttributes.width.length - 1] === '%') {
-			imageWidth = this.clientWidth * (parseFloat(imageAttributes.width.replace(/[^\d.-]/g, '')) / 100);
-		}
-		else {
-			imageWidth = parseFloat(imageAttributes.width.replace(/[^\d.-]/g, ''));
-		}
+		const imageWidth = (imageAttributes.width[imageAttributes.width.length - 1] === '%')
+			? thisElem.clientWidth * (parseFloat(imageAttributes.width.replace(/[^\d.-]/g, '')) / 100)
+			: parseFloat(imageAttributes.width.replace(/[^\d.-]/g, ''));
 
 		// Support percentages
-		if(imageAttributes.height[imageAttributes.height.length - 1] === '%') {
-			imageHeight = this.clientHeight * (parseFloat(imageAttributes.height.replace(/[^\d.-]/g, '')) / 100);
-		}
-		else {
-			imageHeight = parseFloat(imageAttributes.height.replace(/[^\d.-]/g, ''));
-		}
+		const imageHeight = (imageAttributes.height[imageAttributes.height.length - 1] === '%')
+			? thisElem.clientHeight * (parseFloat(imageAttributes.height.replace(/[^\d.-]/g, '')) / 100)
+			: parseFloat(imageAttributes.height.replace(/[^\d.-]/g, ''));
 
-		imageNode.setAttribute('x', coordinateX - (imageWidth / 2));
-		imageNode.setAttribute('y', coordinateY - (imageHeight / 2));
+		imageNode.setAttribute('x', String(coordinateX - (imageWidth / 2)));
+		imageNode.setAttribute('y', String(coordinateY - (imageHeight / 2)));
 
-		imageNode.setAttribute('width', imageWidth);
-		imageNode.setAttribute('height', imageHeight);
+		imageNode.setAttribute('width', String(imageWidth));
+		imageNode.setAttribute('height', String(imageHeight));
 
 		for(let attributeKey in imageAttributes) {
 			if(imageAttributes.hasOwnProperty(attributeKey) && ['href', 'width', 'height', 'id'].indexOf(attributeKey) < 0)
 				imageNode.setAttribute(attributeKey, imageAttributes[attributeKey]);
 		}
 
-		imageNode.addEventListener('mousedown',function(event) {
+		imageNode.addEventListener('mousedown',(event) => {
 			event.stopPropagation();
 			event.preventDefault();
 			thisElem.removeImage(imageId);
 		});
 
-		imageNode.addEventListener('touchstart',function(event) {
+		imageNode.addEventListener('touchstart',(event) => {
 			event.stopPropagation();
 			event.preventDefault();
 			thisElem.removeImage(imageId);
@@ -213,7 +205,7 @@ class TransparencyDrawing extends HTMLElement {
 			'filter': 'url(#drop-shadow)'
 		};
 
-		pathAttributes = Object.assign(pathAttributesDefault, pathAttributes); // Merge defaults with passed params
+		pathAttributes = Object.assign({}, pathAttributesDefault, pathAttributes); // Merge defaults with passed params
 
 		this.startPathStyle(id, pathAttributes, percentageX, percentageY);
 	};
@@ -259,11 +251,9 @@ class TransparencyDrawing extends HTMLElement {
 		this.emitMirror(mirrorTag, 'endPath', arguments);
 	};
 
-	emitMirror(mirrorTag, functionName, functionArgs) {
-		if(typeof functionArgs == 'undefined')
-			functionArgs = [];
-
-		let emitMirrorDetail = {function: functionName, arguments: Array.prototype.slice.call(functionArgs)};
+	emitMirror(mirrorTag, functionName, functionArgs = []) {
+		const functionArgsArray = Array.isArray(functionArgs) ? functionArgs : Array.prototype.slice.call(functionArgs);
+		let emitMirrorDetail = {function: functionName, arguments: functionArgsArray};
 		if(typeof mirrorTag != 'undefined')
 			emitMirrorDetail.tag = mirrorTag;
 
@@ -285,12 +275,9 @@ class TransparencyDrawing extends HTMLElement {
 	}
 
 	addCanvasTouchHandlers(targetElem) {
-		let thisElem = this;
+		const thisElem = this;
 
 		thisElem.removeCanvasTouchHandlers();
-
-		//thisElem.addEventListener('mousedown', elementListener, false);
-		//thisElem.addEventListener('mousemove', elementListener, false);
 
 		thisElem._eventHandlers.push({
 			target: targetElem,
@@ -325,16 +312,13 @@ class TransparencyDrawing extends HTMLElement {
 		function mouseHandler(event) {
 			event.stopPropagation();
 			event.preventDefault();
-			let id = 'mouse';
-			let mode = getMode();
+			const id = 'mouse';
+			const mode = getMode();
 
-			let canvasBoundingClientRect = targetElem.getBoundingClientRect();
+			const canvasBoundingClientRect = targetElem.getBoundingClientRect();
 
-			let eventX = event.clientX - canvasBoundingClientRect.left;
-			let eventY = event.clientY - canvasBoundingClientRect.top;
-
-			let eventPercentageX = eventX / thisElem.shadowRoot.querySelector('svg').clientWidth;
-			let eventPercentageY = eventY / thisElem.shadowRoot.querySelector('svg').clientHeight;
+			const eventPercentageX = (event.clientX - canvasBoundingClientRect.left) / canvasBoundingClientRect.width;
+			const eventPercentageY = (event.clientY - canvasBoundingClientRect.top) / canvasBoundingClientRect.height;
 
 			switch(mode) {
 				case 'image':
@@ -368,19 +352,16 @@ class TransparencyDrawing extends HTMLElement {
 		function touchHandler(event) {
 			event.stopPropagation();
 			event.preventDefault();
-			let mode = getMode();
-			let canvasBoundingClientRect = targetElem.getBoundingClientRect();
+			const mode = getMode();
+			const canvasBoundingClientRect = targetElem.getBoundingClientRect();
 
 			for(let touchKey in event.changedTouches) {
 				if(event.changedTouches.hasOwnProperty(touchKey)) {
-					let touch = event.changedTouches[touchKey];
-					let id = touch.identifier.toString();
+					const touch = event.changedTouches[touchKey];
+					const id = touch.identifier.toString();
 
-					let eventX = touch.clientX - canvasBoundingClientRect.left;
-					let eventY = touch.clientY - canvasBoundingClientRect.top;
-
-					let eventPercentageX = eventX / thisElem.clientWidth;
-					let eventPercentageY = eventY / thisElem.clientHeight;
+					const eventPercentageX = (touch.clientX - canvasBoundingClientRect.left) / canvasBoundingClientRect.width;
+					const eventPercentageY = (touch.clientY - canvasBoundingClientRect.top) / canvasBoundingClientRect.height;
 
 					switch(mode) {
 						case 'image':

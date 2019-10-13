@@ -1,7 +1,6 @@
 # Created by .ignore support plugin (hsz.mobi)
 node_modules
 *.png
-test.html
-test2.html
+test*
 *.iml
 .idea
